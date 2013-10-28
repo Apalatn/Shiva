@@ -37,6 +37,17 @@ GLuint vao;
 // loaded scene data
 const struct aiScene *scene = 0;
 
+static struct RendererState {
+	// orthographic projection matrix
+	float ortho_l, ortho_r, ortho_t, ortho_b, ortho_n, ortho_f;
+	float orthoProj[16];
+
+	// vertex grid dimensions
+	unsigned int gridHCount, gridVCount; // number of vertices horizontally and vertically
+	float gridWidth, gridHeight;		 // scaled dimensions on the grid in world units
+
+} g_state;
+
 int main(int argc, char *argv[])
 {
 	/* Request opengl 3.2 context.
@@ -131,6 +142,45 @@ int main(int argc, char *argv[])
 	SDL_Quit();
 }
 
+void populate(std::vector<float> &verts, std::vector<unsigned int> &tris)
+{
+	verts.clear();
+	tris.clear();
+
+	float xSep = 1.0f / (g_state.gridHCount-1);
+	float ySep = 1.0f / (g_state.gridVCount-1);
+
+	for(unsigned int x = 0; x < g_state.gridHCount; x++)
+	{
+		for(unsigned int y = 0; y < g_state.gridHCount; y++)
+		{
+			// position
+			verts.push_back(x * xSep * g_state.gridWidth);
+			verts.push_back(y * ySep * g_state.gridHeight);
+			verts.push_back(0.5f);
+			verts.push_back(1.0f);
+			
+			float color = 1 - (((x + y) % 2) | (x % 2));
+
+			// color
+			verts.push_back(color);
+			verts.push_back(color);
+			verts.push_back(color);
+			verts.push_back(1.0f);
+		}
+	}
+
+	// create triangle strips
+	for(unsigned int row = 0; row < g_state.gridVCount-1; row++)
+	{
+		for(unsigned int x = 0; x < g_state.gridHCount; x++)
+		{
+			tris.push_back((row+1) * g_state.gridHCount + x);
+			tris.push_back(row * g_state.gridHCount + x);
+		}
+	}
+}
+
 void initShaders()
 {
 	std::vector<GLuint> shaderList;
@@ -145,49 +195,67 @@ void initShaders()
 }
 
 
-GLint offsetUniformLocation;
-GLint zNearUniformLocation;
-GLint zFarUniformLocation;
-GLint frustumScaleUniformLocation;
+GLint projectionLocation;
+GLint thresholdLocation;
 
 void init()
 {
 	initShaders();
 
 	// get "pointers" to uniforms in the shaders
-	offsetUniformLocation = glGetUniformLocation(shaderProgram, "offset");
-	zNearUniformLocation = glGetUniformLocation(shaderProgram, "zNear");
-	zFarUniformLocation = glGetUniformLocation(shaderProgram, "zFar");
-	frustumScaleUniformLocation = glGetUniformLocation(shaderProgram, "frustumScale");
+	projectionLocation = glGetUniformLocation(shaderProgram, "projection");
+	thresholdLocation = glGetUniformLocation(shaderProgram, "threshold");
+
+	g_state.ortho_n = -1;
+	g_state.ortho_f = 5;
+	g_state.ortho_l = 0;
+	g_state.ortho_r = 1;
+	g_state.ortho_t = 0;
+	g_state.ortho_b = 1;
+
+	g_state.orthoProj[0] = 2.0f/(g_state.ortho_r - g_state.ortho_l);
+	g_state.orthoProj[5] = 2.0f/(g_state.ortho_t - g_state.ortho_b);
+	g_state.orthoProj[10] = -2.0f/(g_state.ortho_f - g_state.ortho_n);
+	g_state.orthoProj[12] = (g_state.ortho_l + g_state.ortho_r)/(g_state.ortho_l - g_state.ortho_r);
+	g_state.orthoProj[13] = (g_state.ortho_t + g_state.ortho_b)/(g_state.ortho_b - g_state.ortho_t);
+	g_state.orthoProj[14] = (g_state.ortho_f + g_state.ortho_n)/(g_state.ortho_f - g_state.ortho_n);
+	g_state.orthoProj[15] = 1;
 
 	std::vector<float> vertData;
-
 	std::vector<unsigned int> triangleData;
+
+	g_state.gridVCount = g_state.gridHCount = 10;
+	g_state.gridWidth = g_state.gridHeight = 1.0f;
+
+	populate(vertData, triangleData);
 
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
-	//glGenBuffers(1, &vertBufferObject);
-	//glBindBuffer(GL_ARRAY_BUFFER, vertBufferObject);
-	//glBufferData(GL_ARRAY_BUFFER, 0 * 8 * sizeof(float), &vertData[0], GL_STATIC_DRAW);
-	//glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glGenBuffers(1, &vertBufferObject);
+	glBindBuffer(GL_ARRAY_BUFFER, vertBufferObject);
+	glBufferData(GL_ARRAY_BUFFER, vertData.size() * 8 * sizeof(float), &vertData[0], GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	//glGenBuffers(1, &triIndexBufferObject);
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triIndexBufferObject);
-	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0 * 3 * sizeof(int), &triangleData[0], GL_STATIC_DRAW);
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glGenBuffers(1, &triIndexBufferObject);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triIndexBufferObject);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangleData.size() * sizeof(int), &triangleData[0], GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+	// enable backface culling
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
+	// enable blending
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	glEnable(GL_DEPTH_TEST);
 
 	glUseProgram(shaderProgram);
-	glUniform1f(zNearUniformLocation, 1.0f);
-	glUniform1f(zFarUniformLocation, 6.0f);
-	glUniform1f(frustumScaleUniformLocation, 1.0f);
+	glUniformMatrix4fv(projectionLocation,1,GL_FALSE,g_state.orthoProj);
 	glUseProgram(0);
 }
 
@@ -205,6 +273,18 @@ void ComputePositionOffsets(float &fXOffset, float &fYOffset)
     fYOffset = sinf(fCurrTimeThroughLoop * fScale) * 0.5f;
 }
 
+void ComputeThreshold(float &t)
+{
+    const float fLoopDuration = 20.0f;
+    const float fScale = 3.14159f * 2.0f / fLoopDuration;
+    
+    float fElapsedTime = SDL_GetTicks() / 1000.0f;
+    
+    float fCurrTimeThroughLoop = fmodf(fElapsedTime, fLoopDuration);
+    
+    t = pow(cosf(fCurrTimeThroughLoop * fScale), 2);
+}
+
 void render()
 {
 	//glClearColor(1.0f,0.0f,0.0f,1.0f);
@@ -214,19 +294,20 @@ void render()
 
 	glUseProgram(shaderProgram);
 
-	float xOffset = 0.0f, yOffset = 0.0f;
-    ComputePositionOffsets(xOffset, yOffset);
+	float t;
+	ComputeThreshold(t);
+	glUniform1f(thresholdLocation, t);
 
-	glUniform2f(offsetUniformLocation, xOffset, yOffset);
-
-	//glBindBuffer(GL_ARRAY_BUFFER, vertBufferObject);
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triIndexBufferObject);
-	//glEnableVertexAttribArray(0);
-	//glEnableVertexAttribArray(1);
-	//glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), 0);
-	//glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), (GLvoid *) (4*sizeof(GLfloat)));
-	////glDrawArrays(GL_TRIANGLES, 3, 3);
-	//glDrawElements(GL_TRIANGLES,0,GL_UNSIGNED_INT,0);
+	glBindBuffer(GL_ARRAY_BUFFER, vertBufferObject);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triIndexBufferObject);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), 0);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), (GLvoid *) (4*sizeof(GLfloat)));
+	for(unsigned int row = 0; row < g_state.gridVCount - 1; row++)
+	{
+		glDrawElements(GL_TRIANGLE_STRIP,g_state.gridHCount * 2,GL_UNSIGNED_INT, (GLvoid *) (sizeof(GLint) * g_state.gridHCount * 2 * row)); 
+	}
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
