@@ -16,7 +16,7 @@ void main()
   {
     gl_Position = gl_in[i].gl_Position;
 	vColor2 = vColor[i];
-	//vColor2 = vec4(i == 1 ? 1 : 0, i == 2 ? 1 : 0, i == 3 ? 1 : 0, 1.0);
+	//vColor2 = vec4(i == 0 ? 1 : 0, i == 1 ? 1 : 0, i == 2 ? 1 : 0, 1.0);
 	vPos2 = vPos[i];
     EmitVertex();
   }
@@ -56,8 +56,9 @@ void main()
 	int prev = (oneTriShift + 2) % 3;
 	int next = (oneTriShift + 1) % 3;
 
-	vec4 lerp0 = mix(gl_in[oneTriShift].gl_Position, gl_in[prev].gl_Position, lerps[0]);
-	vec4 lerp1 = mix(gl_in[oneTriShift].gl_Position, gl_in[next].gl_Position, lerps[1]);
+	// I have no idea why that flip is necessary, from a theoretical standpoint
+	vec4 lerp0 = mix(gl_in[prev].gl_Position, gl_in[oneTriShift].gl_Position, oneTriShift == 0 ? lerps[1] :lerps[0]);
+	vec4 lerp1 = mix(gl_in[next].gl_Position, gl_in[oneTriShift].gl_Position, oneTriShift == 0 ? lerps[0] :lerps[1]);
 
 	gl_Position = lerp0 + zshift;
 	vColor2 = col1;
@@ -82,8 +83,8 @@ void main()
 	int prev = (twoTriMissing + 2) % 3;
 	int next = (twoTriMissing + 1) % 3;
 
-	vec4 lerp0 = mix(gl_in[twoTriMissing].gl_Position, gl_in[prev].gl_Position, lerps[0]);
-	vec4 lerp1 = mix(gl_in[twoTriMissing].gl_Position, gl_in[next].gl_Position, lerps[1]);
+	vec4 lerp0 = mix(gl_in[twoTriMissing].gl_Position, gl_in[prev].gl_Position, twoTriMissing == 0 ? lerps[1] :lerps[0]);
+	vec4 lerp1 = mix(gl_in[twoTriMissing].gl_Position, gl_in[next].gl_Position, twoTriMissing == 0 ? lerps[0] :lerps[1]);
 
 	// triangle 1
 	gl_Position = lerp0 + zshift;
@@ -104,17 +105,17 @@ void main()
 
 	// triangle 2
 	gl_Position = lerp1 + zshift;
-	vColor2 = vec4(threshold);
+	vColor2 = col2;
 	vPos2 = gl_Position + zshift;
 	EmitVertex();
 
 	gl_Position = gl_in[next].gl_Position + zshift;
-	vColor2 = col1;
+	vColor2 = col2;
 	vPos2 = gl_Position + zshift;
 	EmitVertex();
 
 	gl_Position = gl_in[prev].gl_Position + zshift;
-	vColor2 = col1;
+	vColor2 = col2;
 	vPos2 = gl_Position + zshift;
 	EmitVertex();
 	EndPrimitive();

@@ -150,9 +150,9 @@ void populate(std::vector<float> &verts, std::vector<unsigned int> &tris)
 	float xSep = 1.0f / (g_state.gridHCount-1);
 	float ySep = 1.0f / (g_state.gridVCount-1);
 
-	for(unsigned int x = 0; x < g_state.gridHCount; x++)
+	for(unsigned int y = 0; y < g_state.gridHCount; y++)
 	{
-		for(unsigned int y = 0; y < g_state.gridHCount; y++)
+		for(unsigned int x = 0; x < g_state.gridHCount; x++)
 		{
 			// position
 			verts.push_back(x * xSep * g_state.gridWidth);
@@ -160,8 +160,9 @@ void populate(std::vector<float> &verts, std::vector<unsigned int> &tris)
 			verts.push_back(0.5f);
 			verts.push_back(1.0f);
 			
-			float color = 1 - (((x + y) % 2) | (x % 2));
-
+			//float color = 1 - (((x + y) % 2) | (x % 2));
+			float color = fabs((float)(g_state.gridVCount - y) + (g_state.gridHCount - x)) / (g_state.gridVCount + g_state.gridHCount);
+			
 			// color
 			verts.push_back(color);
 			verts.push_back(color);
@@ -175,8 +176,8 @@ void populate(std::vector<float> &verts, std::vector<unsigned int> &tris)
 	{
 		for(unsigned int x = 0; x < g_state.gridHCount; x++)
 		{
-			tris.push_back((row+1) * g_state.gridHCount + x);
 			tris.push_back(row * g_state.gridHCount + x);
+			tris.push_back((row+1) * g_state.gridHCount + x);
 		}
 	}
 }
@@ -246,7 +247,7 @@ void init()
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
-	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	glPolygonMode( GL_FRONT, GL_FILL );
 
 	// enable blending
 	glEnable(GL_BLEND);
@@ -308,6 +309,8 @@ void render()
 	{
 		glDrawElements(GL_TRIANGLE_STRIP,g_state.gridHCount * 2,GL_UNSIGNED_INT, (GLvoid *) (sizeof(GLint) * g_state.gridHCount * 2 * row)); 
 	}
+
+//	glDrawElements(GL_TRIANGLE_STRIP,g_state.gridHCount * 2 - 5,GL_UNSIGNED_INT, 0); 
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
