@@ -150,7 +150,7 @@ void populate(std::vector<float> &verts, std::vector<unsigned int> &tris)
 	float xSep = 1.0f / (g_state.gridHCount-1);
 	float ySep = 1.0f / (g_state.gridVCount-1);
 
-	for(unsigned int y = 0; y < g_state.gridHCount; y++)
+	for(unsigned int y = 0; y < g_state.gridVCount; y++)
 	{
 		for(unsigned int x = 0; x < g_state.gridHCount; x++)
 		{
@@ -160,9 +160,13 @@ void populate(std::vector<float> &verts, std::vector<unsigned int> &tris)
 			verts.push_back(0.5f);
 			verts.push_back(1.0f);
 			
-			//float color = 1 - (((x + y) % 2) | (x % 2));
-			float color = fabs((float)(g_state.gridVCount - y) + (g_state.gridHCount - x)) / (g_state.gridVCount + g_state.gridHCount);
-			
+			float xfrac = (float)x / g_state.gridHCount;
+			float yfrac = (float)y / g_state.gridVCount;
+
+			//float color = 1 - (((x + y) % 2) | (x % 2)) * fabs((float)(g_state.gridVCount - y) + (/*g_state.gridHCount -*/ x)) / (g_state.gridVCount + g_state.gridHCount);;
+			//float color = fabs((float)(g_state.gridVCount - y) + (/*g_state.gridHCount -*/ x)) / (g_state.gridVCount + g_state.gridHCount);
+			float color = fabs(xfrac/2 + yfrac/2);
+
 			// color
 			verts.push_back(color);
 			verts.push_back(color);
@@ -225,7 +229,8 @@ void init()
 	std::vector<float> vertData;
 	std::vector<unsigned int> triangleData;
 
-	g_state.gridVCount = g_state.gridHCount = 10;
+	g_state.gridVCount = 10;
+	g_state.gridHCount = 10;
 	g_state.gridWidth = g_state.gridHeight = 1.0f;
 
 	populate(vertData, triangleData);

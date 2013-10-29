@@ -88,17 +88,17 @@ void main()
 
 	// triangle 1
 	gl_Position = lerp0 + zshift;
-	vColor2 = col2;
+	vColor2 = col1 + col2;
 	vPos2 = gl_Position + zshift;
 	EmitVertex();
 
 	gl_Position = lerp1 + zshift;
-	vColor2 = col2;
+	vColor2 = col1 + col2;
 	vPos2 = gl_Position + zshift;
 	EmitVertex();
 
 	gl_Position = gl_in[prev].gl_Position + zshift;
-	vColor2 = col2;
+	vColor2 = col1 + col2;
 	vPos2 = gl_Position + zshift;
 	EmitVertex();
 	EndPrimitive();
