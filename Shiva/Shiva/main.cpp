@@ -163,9 +163,9 @@ void populate(std::vector<float> &verts, std::vector<unsigned int> &tris)
 			float xfrac = (float)x / g_state.gridHCount;
 			float yfrac = (float)y / g_state.gridVCount;
 
-			//float color = 1 - (((x + y) % 2) | (x % 2)) * fabs((float)(g_state.gridVCount - y) + (/*g_state.gridHCount -*/ x)) / (g_state.gridVCount + g_state.gridHCount);;
+			float color = 1 - (((x + y) % 2) | (x % 2)) * fabs((float)(g_state.gridVCount - y) + (/*g_state.gridHCount -*/ x)) / (g_state.gridVCount + g_state.gridHCount);;
 			//float color = fabs((float)(g_state.gridVCount - y) + (/*g_state.gridHCount -*/ x)) / (g_state.gridVCount + g_state.gridHCount);
-			float color = fabs(xfrac/2 + yfrac/2);
+			//float color = fabs(xfrac/2 + yfrac/2);
 
 			// color
 			verts.push_back(color);
@@ -229,8 +229,8 @@ void init()
 	std::vector<float> vertData;
 	std::vector<unsigned int> triangleData;
 
-	g_state.gridVCount = 10;
-	g_state.gridHCount = 10;
+	g_state.gridVCount = 20;
+	g_state.gridHCount = 20;
 	g_state.gridWidth = g_state.gridHeight = 1.0f;
 
 	populate(vertData, triangleData);
@@ -240,7 +240,7 @@ void init()
 
 	glGenBuffers(1, &vertBufferObject);
 	glBindBuffer(GL_ARRAY_BUFFER, vertBufferObject);
-	glBufferData(GL_ARRAY_BUFFER, vertData.size() * 8 * sizeof(float), &vertData[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertData.size() * 8, &vertData[0], GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glGenBuffers(1, &triIndexBufferObject);
